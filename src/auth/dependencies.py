@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 import jwt
@@ -31,6 +32,14 @@ async def get_current_user(
             raise credentials_exception
 
     except jwt.InvalidTokenError:
+        raise credentials_exception
+
+    expire = payload.get("exp")
+    if not expire:
+        raise credentials_exception
+
+    expire_time = datetime.fromtimestamp(expire, timezone.utc)
+    if expire_time and expire_time < datetime.now(timezone.utc):
         raise credentials_exception
 
     auth_repo = AuthRepository(session)

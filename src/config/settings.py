@@ -10,7 +10,7 @@ class DBSettings(BaseSettings):
         extra="ignore"
     )
 
-    db_port: int
+    db_port: int = Field(5432)
     db_name: str = Field("postgres")
     db_user: str = Field("postgres")
     db_password: str = Field("postgres")
