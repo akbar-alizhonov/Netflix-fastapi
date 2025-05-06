@@ -3,9 +3,9 @@ from sqlalchemy.orm import DeclarativeBase
 
 from src.config.settings import get_settings
 
-settings = get_settings()
 
 def get_async_engine() -> AsyncEngine:
+    settings = get_settings()
     engine = create_async_engine(settings.db.url)
     return engine
 
