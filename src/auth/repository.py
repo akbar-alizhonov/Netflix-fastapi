@@ -1,5 +1,5 @@
 from src.auth.schemas import UserCreateSchema
-from src.user.models import User
+from src.auth.models import User
 from src.core.repository import RepositoryBase
 
 

@@ -1,3 +1,5 @@
+import redis.asyncio
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import async_session_maker
@@ -12,5 +14,3 @@ async def get_async_session() -> AsyncSession:
             raise
         finally:
             await session.close()
-
-

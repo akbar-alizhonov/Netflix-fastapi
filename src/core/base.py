@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.user.models import User
+from src.auth.models import User
 
 
 class Base:

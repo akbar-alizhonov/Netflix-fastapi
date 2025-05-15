@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.auth.exceptions import CredentialsException, TokenExpiredException
 from src.auth.repository import AuthRepository
 from src.config.dependencies import get_async_session
 from src.config.settings import get_settings
@@ -18,35 +19,26 @@ async def get_current_user(
         token: Annotated[str, Depends(oauth2_scheme)]
 ):
     settings = get_settings()
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
 
     try:
         payload = jwt.decode(token, settings.jwt.jwt_secret_key, algorithms=[settings.jwt.algorithm])
 
         user_id = payload.get("user_id")
         if not user_id:
-            raise credentials_exception
+            raise CredentialsException
 
     except jwt.InvalidTokenError:
-        raise credentials_exception
+        raise CredentialsException
 
     expire = payload.get("exp")
-    if not expire:
-        raise credentials_exception
-
-    expire_time = datetime.fromtimestamp(expire, timezone.utc)
-    if expire_time and expire_time < datetime.now(timezone.utc):
-        raise credentials_exception
+    if (not expire) or (int(expire) < datetime.now(timezone.utc).timestamp()):
+        raise TokenExpiredException
 
     auth_repo = AuthRepository(session)
 
     user = await auth_repo.get(user_id)
     if not user:
-        raise credentials_exception
+        raise CredentialsException
 
     return user
 

@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, or_
 
 from src import User
+from src.auth.exceptions import UserUsernameAlreadyExistException, UserEmailAlreadyExistException
 from src.auth.schemas import UserCreateSchema
 from src.auth.utils import get_password_hash, verify_password
 from src.core.dao import DAOBase
@@ -32,17 +33,11 @@ class AuthDAO(DAOBase):
     async def add(self, user_data: UserCreateSchema):
         existing_user_by_username = await self.get_user_by_username_or_none(user_data.username)
         if existing_user_by_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this username already exists.",
-            )
+            raise UserUsernameAlreadyExistException
 
         existing_user_by_email = await self.get_user_by_email_or_none(user_data.email)
         if existing_user_by_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this email already exists.",
-            )
+            raise UserEmailAlreadyExistException
 
         hashed_password = get_password_hash(user_data.password)
         user_data.password = hashed_password
@@ -62,19 +57,13 @@ class AuthDAO(DAOBase):
 
         return user.scalar_one_or_none()
 
-    async def authenticate(self, user_data: OAuth2PasswordRequestForm) -> User:
+    async def authenticate(self, user_data: OAuth2PasswordRequestForm) -> User | None:
         user = await self.get_user(user_data.username)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found.",
-            )
+            return
 
         if not verify_password(user_data.password, user.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password.",
-            )
+            return
 
         return user
 
