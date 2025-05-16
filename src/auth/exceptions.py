@@ -27,3 +27,13 @@ class CredentialsException(BaseHTTPException):
 class TokenExpiredException(BaseHTTPException):
     status_code = status.HTTP_401_UNAUTHORIZED
     detail = "Token expired."
+
+
+class RefreshTokenNotFound(BaseHTTPException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    detail = "Refresh token not found."
+
+
+class UserNotFoundFromRefreshToken(BaseHTTPException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    detail = "User not found from refresh token."

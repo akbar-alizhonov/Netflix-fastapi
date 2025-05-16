@@ -1,15 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
 
 from src import User
 from src.auth.dao import AuthDAO
-from src.auth.exceptions import IncorrectUsernameOrPasswordException
+from src.auth.exceptions import IncorrectUsernameOrPasswordException, RefreshTokenNotFound, UserNotFoundFromRefreshToken
 from src.auth.repository import AuthRepository
 from src.auth.schemas import UserCreateSchema, TokenSchema
-from src.config.dependencies import get_async_session
+from src.config.dependencies import get_async_session, get_redis
 from src.auth.dependencies import get_current_user
 
 router = APIRouter(tags=["Аутентификация & Авторизация"], prefix="/auth")
@@ -24,24 +25,44 @@ async def register_user(
     await auth_dao.add(user_data)
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenSchema)
 async def login(
+        response: Response,
         user_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        redis: Annotated[Redis, Depends(get_redis)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     auth_dao = AuthDAO(session)
+
     user = await auth_dao.authenticate(user_data)
     if not user:
         raise IncorrectUsernameOrPasswordException
 
-    access_token = auth_dao.create_access_token(user)
+    access_token = auth_dao.generate_access_token(user.id, user.username)
+    refresh_token = auth_dao.generate_refresh_token(user.id)
+    await auth_dao.save_refresh_token(user.id, refresh_token, redis)
+
+    response.set_cookie("refresh_token", refresh_token, httponly=True)
 
     return TokenSchema(access_token=access_token, token_type="bearer")
 
 
 @router.post("/logout")
-async def logout(response: Response, user: User = Depends(get_current_user)):
-    response.delete_cookie("access_token")
+async def logout(
+        response: Response,
+        request: Request,
+        user: Annotated[User, Depends(get_current_user)],
+        redis: Annotated[Redis, Depends(get_redis)],
+        session: Annotated[AsyncSession, Depends(get_async_session)]
+):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise RefreshTokenNotFound
+
+    auth_dao = AuthDAO(session)
+
+    response.delete_cookie("refresh_token")
+    await auth_dao.delete_refresh_token(refresh_token, redis)
 
 
 @router.get("/me")
@@ -49,3 +70,30 @@ async def get_me(
         user: Annotated[User, Depends(get_current_user)],
 ):
     return user
+
+
+@router.post("/refresh_token", response_model=TokenSchema)
+async def new_refresh_token(
+        response: Response,
+        request: Request,
+        session: Annotated[AsyncSession, Depends(get_async_session)],
+        user: Annotated[User, Depends(get_current_user)],
+        redis: Annotated[Redis, Depends(get_redis)],
+):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise RefreshTokenNotFound
+
+    auth_dao = AuthDAO(session)
+
+    user = await auth_dao.get_user_by_refresh_token(refresh_token, redis)
+    if not user:
+        raise UserNotFoundFromRefreshToken
+
+    access_token = auth_dao.generate_access_token(user.id, user.username)
+    refresh_token = auth_dao.generate_refresh_token(user.id)
+    await auth_dao.save_refresh_token(user.id, refresh_token, redis)
+
+    response.set_cookie("refresh_token", refresh_token, httponly=True)
+
+    return TokenSchema(access_token=access_token, token_type="bearer")

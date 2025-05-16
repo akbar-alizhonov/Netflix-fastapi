@@ -29,12 +29,31 @@ class JWTSettings(BaseSettings):
 
     jwt_secret_key: str
     access_token_expire_minutes: int = Field(15)
+    refresh_token_expire_days: int = Field(1)
     algorithm: str = Field("HS256")
+
+
+class RedisSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        extra="ignore"
+    )
+
+    redis_host: str
+    redis_port: int = Field(6379)
+    redis_password: str
+    redis_user: str
+    redis_db: int = Field(0)
+
+    @property
+    def url(self) -> str:
+        return f"redis://{self.redis_user}:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 class Settings:
     db = DBSettings()
     jwt = JWTSettings()
+    redis = RedisSettings()
 
 
 def get_settings():
