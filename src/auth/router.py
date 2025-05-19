@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
 from src import User
-from src.auth.dao import AuthDAO
+from src.auth.daos.auth import AuthDAO
+from src.auth.daos.token import TokenDAO
 from src.auth.exceptions import IncorrectUsernameOrPasswordException, RefreshTokenNotFound, UserNotFoundFromRefreshToken
 from src.auth.repository import AuthRepository
 from src.auth.schemas import UserCreateSchema, TokenSchema
@@ -38,13 +39,11 @@ async def login(
     if not user:
         raise IncorrectUsernameOrPasswordException
 
-    access_token = auth_dao.generate_access_token(user.id, user.username)
-    refresh_token = auth_dao.generate_refresh_token(user.id)
-    await auth_dao.save_refresh_token(user.id, refresh_token, redis)
+    token_dao = TokenDAO(redis)
+    tokens = await token_dao.generate_new_refresh_token_and_access_token(user.id, user.username)
+    response.set_cookie("refresh_token", tokens.get("refresh_token"), httponly=True)
 
-    response.set_cookie("refresh_token", refresh_token, httponly=True)
-
-    return TokenSchema(access_token=access_token, token_type="bearer")
+    return TokenSchema(access_token=tokens.get("access_token"), token_type="bearer")
 
 
 @router.post("/logout")
@@ -59,10 +58,9 @@ async def logout(
     if not refresh_token:
         raise RefreshTokenNotFound
 
-    auth_dao = AuthDAO(session)
-
+    token_dao = TokenDAO(redis=redis)
     response.delete_cookie("refresh_token")
-    await auth_dao.delete_refresh_token(refresh_token, redis)
+    await token_dao.delete_refresh_token(refresh_token, redis)
 
 
 @router.get("/me")
@@ -90,10 +88,8 @@ async def new_refresh_token(
     if not user:
         raise UserNotFoundFromRefreshToken
 
-    access_token = auth_dao.generate_access_token(user.id, user.username)
-    refresh_token = auth_dao.generate_refresh_token(user.id)
-    await auth_dao.save_refresh_token(user.id, refresh_token, redis)
-
+    token_dao = TokenDAO(redis)
+    tokens = await token_dao.generate_new_refresh_token_and_access_token(user.id, user.username, refresh_token)
     response.set_cookie("refresh_token", refresh_token, httponly=True)
 
-    return TokenSchema(access_token=access_token, token_type="bearer")
+    return TokenSchema(access_token=tokens.get("access_token"), token_type="bearer")

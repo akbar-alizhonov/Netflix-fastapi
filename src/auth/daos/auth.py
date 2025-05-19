@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from redis.asyncio import Redis
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, or_
@@ -7,9 +5,8 @@ from sqlalchemy import select, or_
 from src import User
 from src.auth.exceptions import UserUsernameAlreadyExistException, UserEmailAlreadyExistException
 from src.auth.schemas import UserCreateSchema
-from src.auth.utils import get_password_hash, verify_password, generate_token, validate_token
+from src.auth.utils import get_password_hash, verify_password
 from src.core.dao import DAOBase
-from src.config.settings import get_settings
 
 
 class AuthDAO(DAOBase):
@@ -65,42 +62,11 @@ class AuthDAO(DAOBase):
 
         return user
 
-    def generate_access_token(self, user_id: int, username: str) -> str:
-        settings = get_settings()
-        to_encode = {
-            "sub": str(user_id),
-            "username": username,
-        }
-
-        access_token = generate_token(
-            to_encode,
-            expires_delta=timedelta(minutes=settings.jwt.access_token_expire_minutes)
-        )
-
-        return access_token
-
-    def generate_refresh_token(self, user_id: int) -> str:
-        settings = get_settings()
-        to_encode = {"sub": str(user_id)}
-
-        refresh_token = generate_token(to_encode, expires_delta=timedelta(days=settings.jwt.refresh_token_expire_days))
-
-        return refresh_token
-
     async def get_user_by_refresh_token(self, refresh_token: str, redis: Redis) -> User | None:
         user_id = await redis.get(refresh_token)
         user = await self._session.get(User, int(user_id))
 
         return user
-
-    async def save_refresh_token(self, user_id: int, refresh_token: str, redis: Redis) -> None:
-        settings = get_settings()
-        await redis.set(refresh_token, user_id, ex=timedelta(days=settings.jwt.refresh_token_expire_days))
-
-    async def delete_refresh_token(self, refresh_token: str, redis: Redis) -> None:
-        await redis.delete(refresh_token)
-
-
 
 
 
