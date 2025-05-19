@@ -90,6 +90,6 @@ async def new_refresh_token(
 
     token_dao = TokenDAO(redis)
     tokens = await token_dao.generate_new_refresh_token_and_access_token(user.id, user.username, refresh_token)
-    response.set_cookie("refresh_token", refresh_token, httponly=True)
+    response.set_cookie("refresh_token", tokens.get("refresh_token"), httponly=True)
 
     return TokenSchema(access_token=tokens.get("access_token"), token_type="bearer")
