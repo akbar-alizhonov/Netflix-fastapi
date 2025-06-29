@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
+from loguru import logger
 
 from src import User
 from src.auth.daos.auth import AuthDAO
@@ -14,7 +15,7 @@ from src.auth.schemas import UserCreateSchema, TokenSchema
 from src.config.dependencies import get_async_session, get_redis
 from src.auth.dependencies import get_current_user
 
-router = APIRouter(tags=["Аутентификация & Авторизация"], prefix="/auth")
+router = APIRouter(tags=["Auth & Register"], prefix="/auth")
 
 @router.post("/register")
 async def register_user(
@@ -42,6 +43,7 @@ async def login(
     token_dao = TokenDAO(redis)
     tokens = await token_dao.generate_new_refresh_token_and_access_token(user.id, user.username)
     response.set_cookie("refresh_token", tokens.get("refresh_token"), httponly=True)
+    logger.info(f"USER {user.username} LOGIN")
 
     return TokenSchema(access_token=tokens.get("access_token"), token_type="bearer")
 
@@ -60,7 +62,8 @@ async def logout(
 
     token_dao = TokenDAO(redis=redis)
     response.delete_cookie("refresh_token")
-    await token_dao.delete_refresh_token(refresh_token, redis)
+    await token_dao.delete_refresh_token(refresh_token)
+    logger.info(f"USER {user.username} LOGOUT")
 
 
 @router.get("/me")

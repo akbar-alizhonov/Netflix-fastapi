@@ -1,6 +1,7 @@
 from redis.asyncio import Redis
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, or_
+from loguru import logger
 
 from src import User
 from src.auth.exceptions import UserUsernameAlreadyExistException, UserEmailAlreadyExistException
@@ -16,14 +17,14 @@ class AuthDAO(DAOBase):
             select(User).where(User.username == username)
         )
 
-        return user.scalars().first()
+        return user.scalar()
 
     async def get_user_by_email_or_none(self, email: str) -> User | None:
         user = await self._session.execute(
             select(User).where(User.email == email)
         )
 
-        return user.scalars().first()
+        return user.scalar()
 
     async def add(self, user_data: UserCreateSchema):
         existing_user_by_username = await self.get_user_by_username_or_none(user_data.username)
@@ -60,6 +61,7 @@ class AuthDAO(DAOBase):
         if not verify_password(user_data.password, user.password):
             return
 
+        logger.info(f"USER {user.username} AUTHENTICATED")
         return user
 
     async def get_user_by_refresh_token(self, refresh_token: str, redis: Redis) -> User | None:

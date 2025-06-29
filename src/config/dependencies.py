@@ -1,4 +1,5 @@
 import redis.asyncio as aioredis
+from elasticsearch import AsyncElasticsearch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,3 +27,14 @@ async def get_redis():
         yield redis
     finally:
         await redis.close()
+
+
+async def get_elastic_client():
+    settings = get_settings()
+    es = AsyncElasticsearch(settings.elasticsearch.url)
+
+    try:
+        await es.ping()
+        yield es
+    finally:
+        await es.close()

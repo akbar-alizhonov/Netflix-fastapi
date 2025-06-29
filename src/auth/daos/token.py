@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from loguru import logger
 from redis.asyncio import Redis
 
 from src.auth.utils import generate_token
@@ -52,6 +53,7 @@ class TokenDAO:
         access_token = self.generate_access_token(user_id, username)
         refresh_token = self.generate_refresh_token(user_id)
         await self.save_refresh_token(user_id, refresh_token)
+        logger.info(f"CREATE NEW REFRESH AND ACCESS TOKENS FOR USER_ID: {user_id}")
 
         return {
             "access_token": access_token,

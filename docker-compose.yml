@@ -26,6 +26,20 @@ services:
     environment:
       REDIS_USER: ${REDIS_USER}
 
+  elastic:
+    image: elasticsearch:7.17.22
+    container_name: elastic
+    env_file:
+      - .env
+    restart: always
+    volumes:
+      - elastic_data:/var/lib/elastic/data
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: "single-node"
+
 volumes:
   postgres_data:
   redis_data:
+  elastic_data:
