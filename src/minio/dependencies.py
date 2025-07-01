@@ -11,6 +11,7 @@ async def get_s3_client() -> BaseClient:
 
     async with session.client(
         "s3",
+        endpoint_url=settings.s3.minio_endpoint,
         aws_access_key_id=settings.s3.minio_access_key,
         aws_secret_access_key=settings.s3.minio_secret_key,
     ) as client:
