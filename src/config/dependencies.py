@@ -18,7 +18,7 @@ async def get_async_session() -> AsyncSession:
             await session.close()
 
 
-async def get_redis():
+async def get_redis() -> aioredis.Redis:
     settings = get_settings()
     redis = aioredis.from_url(settings.redis.url, decode_responses=True)
 
@@ -29,7 +29,7 @@ async def get_redis():
         await redis.close()
 
 
-async def get_elastic_client():
+async def get_elastic_client() -> AsyncElasticsearch:
     settings = get_settings()
     es = AsyncElasticsearch(settings.elasticsearch.url)
 

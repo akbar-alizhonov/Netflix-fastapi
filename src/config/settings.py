@@ -55,12 +55,19 @@ class LoggingSettings(BaseCustomSettings):
     log_level: str = Field("INFO")
 
 
+class S3Settings(BaseCustomSettings):
+    minio_endpoint: str = Field("http://localhost:9000")
+    minio_access_key: str = Field("minioadmin")
+    minio_secret_key: str = Field("minioadmin")
+
+
 class Settings:
     db = DBSettings()
     jwt = JWTSettings()
     redis = RedisSettings()
     elasticsearch = ElasticSearchSettings()
     logging = LoggingSettings()
+    s3 = S3Settings()
 
 
 def get_settings():
