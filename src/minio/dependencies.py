@@ -1,15 +1,15 @@
-import aioboto3
-from botocore.client import BaseClient
+from types_aiobotocore_s3.client import S3Client
+from botocore.session import get_session
 from loguru import logger
 
 from src.config.settings import get_settings
 
 
-async def get_s3_client() -> BaseClient:
-    session = aioboto3.Session()
+async def get_s3_client() -> S3Client:
+    session = get_session()
     settings = get_settings()
 
-    async with session.client(
+    async with session.create_client(
         "s3",
         endpoint_url=settings.s3.minio_endpoint,
         aws_access_key_id=settings.s3.minio_access_key,

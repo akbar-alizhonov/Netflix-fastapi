@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aioboto3>=15.0.0",
+    "aiobotocore>=2.23.0",
     "alembic>=1.15.2",
     "asyncpg>=0.30.0",
     "bcrypt>=4.3.0",
