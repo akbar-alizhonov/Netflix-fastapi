@@ -54,4 +54,17 @@ class MinioService(ServiceBase):
             content=resp
         )
 
+    async def update_file(self, file_id: int, file: UploadFile):
+        old_file = await get_object_or_404(self._session, File, file_id)
+        resp = await self.repo.update(old_file.filename, file)
+
+        old_filename = old_file.filename
+        old_file.filename = resp.filename
+        old_file.content_type = file.content_type
+
+        await self._session.commit()
+        logger.info(f"UPDATE FILE ID [{old_file.id}] OLD FILENAME [{old_filename}] NEW FILENAME [{old_file.filename}]")
+
+        return old_file.id
+
 

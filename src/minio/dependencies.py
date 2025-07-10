@@ -1,6 +1,6 @@
+from aiobotocore.session import get_session
 from botocore.exceptions import BotoCoreError
 from types_aiobotocore_s3.client import S3Client
-from aiobotocore.session import get_session
 from loguru import logger
 
 from src.config.settings import get_settings

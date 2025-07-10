@@ -34,8 +34,10 @@ class MinioRepository:
             Key=filename,
         )
 
-    async def update(self, file: UploadFile):
-        pass
+    async def update(self, filename: str, file: UploadFile):
+        await self.delete(filename)
+
+        return await self.create(file)
 
     async def get(self, filename: str):
         file = await self.s3_client.get_object(
@@ -44,3 +46,6 @@ class MinioRepository:
         )
 
         return file["Body"]
+
+    async def close(self):
+        await self.s3_client.close()
