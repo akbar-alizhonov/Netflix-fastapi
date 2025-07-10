@@ -1,4 +1,4 @@
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Union
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,13 +6,12 @@ from sqlalchemy.orm import DeclarativeBase
 
 T = TypeVar("T", bound=DeclarativeBase)
 
-
 async def get_object_or_404(
         session: AsyncSession,
         model: Type[T],
         pk: int,
         message: str = "Такая запись не найдена в бд"
-):
+) -> Type[T] | None:
     """
         Получает объект из БД по первичному ключу или вызывает 404 ошибку.
 

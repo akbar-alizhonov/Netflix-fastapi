@@ -1,6 +1,4 @@
-from botocore.exceptions import BotoCoreError
 from fastapi import UploadFile
-from loguru import logger
 from types_aiobotocore_s3.client import S3Client
 
 from src.minio.schemas import MinioResponseSchema
@@ -17,23 +15,18 @@ class MinioRepository:
         self.bucket_name = bucket_name
 
     async def create(self, file: UploadFile) -> MinioResponseSchema:
-        try:
-            filename, path = generate_filename_and_path(file.content_type)
-            await self.s3_client.put_object(
-                Body=file.file,
-                Bucket=self.bucket_name,
-                Key=filename,
-                ContentType=file.content_type,
-            )
+        filename, path = generate_filename_and_path(file.content_type)
+        await self.s3_client.put_object(
+            Body=file.file,
+            Bucket=self.bucket_name,
+            Key=filename,
+            ContentType=file.content_type,
+        )
 
-            return MinioResponseSchema(
-                filename=filename,
-                path=path,
-            )
-
-        except BotoCoreError as e:
-            logger.error(f"ERROR WHILE UPLOADING {file.filename}")
-            raise e
+        return MinioResponseSchema(
+            filename=filename,
+            path=path,
+        )
 
     async def delete(self, filename: str):
         await self.s3_client.delete_object(
@@ -44,5 +37,10 @@ class MinioRepository:
     async def update(self, file: UploadFile):
         pass
 
-    async def get(self, *args, **kwargs):
-        pass
+    async def get(self, filename: str):
+        file = await self.s3_client.get_object(
+            Bucket=self.bucket_name,
+            Key=filename,
+        )
+
+        return file["Body"]

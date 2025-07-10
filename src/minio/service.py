@@ -6,6 +6,7 @@ from src import User, File
 from src.core.service import ServiceBase
 from src.core.utils import get_object_or_404
 from src.minio.repository import MinioRepository
+from src.minio.schemas import FileSchema
 
 
 class MinioService(ServiceBase):
@@ -34,11 +35,23 @@ class MinioService(ServiceBase):
 
         return new_file.id
 
-    async def delete(self, file_id):
-        file: File = await get_object_or_404(self._session, File, file_id)
-        resp = await self.repo.delete(file.filename)
+    async def delete_file(self, file_id):
+        file = await get_object_or_404(self._session, File, file_id)
 
+        await self.repo.delete(file.filename)
         await self._session.delete(file)
         await self._session.commit()
+
         logger.info(f"DELETE FILE [{file.filename}] ID [{file_id}]")
+
+    async def get_file(self, file_id) -> FileSchema:
+        file = await get_object_or_404(self._session, File, file_id)
+        resp = await self.repo.get(file.filename)
+
+        return FileSchema(
+            filename=file.filename,
+            content_type=file.content_type,
+            content=resp
+        )
+
 
